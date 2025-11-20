@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Your Name <you@example.com>
+Date: Thu, 20 Nov 2025 00:00:00 +0100
+Subject: [PATCH] meson: fix linux-headers -isystem usage for userfaultfd
+
+On some distros, building QEMU 8.x fails with:
+  ../util/userfaultfd.c:54:32: error: ‘USERFAULTFD_IOC_NEW’ undeclared
+
+QEMU ships its own linux-headers (which define USERFAULTFD_IOC_NEW),
+but Meson passes them via `-isystem` in a way that does not work
+correctly, so the system headers are used instead and the macro is
+missing. This patch changes the Meson invocation so `-isystem` and the
+path are concatenated, which works with affected Meson versions.
+
+See also QEMU issue #1853.
+
+---
+ meson.build | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/meson.build b/meson.build
+index 925a7a15f05..bc6c4cc39eb 100644
+--- a/meson.build
++++ b/meson.build
+@@ -499,8 +499,8 @@ if 'objc' in all_languages
+   add_project_arguments(objc.get_supported_arguments(warn_flags), native: false, language: 'objc')
+ endif
+ if targetos == 'linux'
+-  add_project_arguments('-isystem', meson.current_source_dir() / 'linux-headers',
+-                        '-isystem', 'linux-headers',
++  add_project_arguments('-isystem' + meson.current_source_dir() / 'linux-headers',
++                        '-isystem' + 'linux-headers',
+                         language: all_languages)
+ endif
